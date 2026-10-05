@@ -22,7 +22,7 @@ func AddToFrontQueue(urls []string) {
 
 		redisKey := fmt.Sprintf("%s_queue",classifier())
 
-		fmt.Println(redisKey)
+		
 
 		err:= rdb.RPush(ctx,redisKey,url).Err()
 
@@ -50,7 +50,6 @@ func classifier() string {
 	} else if randomNum >=50 {
 		return "medium"
 	
-
 	} else {
 		return "low"
 	}

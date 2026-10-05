@@ -18,15 +18,15 @@ func NewHashSet() *HashSet{
 }
 
 
-func (set HashSet) AddItem (item string){
+func (set HashSet) AddItem (item string) {
 	set[item] = struct{}{}
 }
 
-func (set HashSet) DeleteItem (item string){
+func (set HashSet) DeleteItem (item string) {
 	delete(set,item)
 }
 
-func (set HashSet) Contains(item string) bool{
+func (set HashSet) Contains(item string) bool {
 	_,exists := set[item]
 	return exists
 }
@@ -195,7 +195,6 @@ func fQselector(){
 }
 
 
-
 func readHighQ(rdb *redis.Client, ctx context.Context) (string,error){
 
 	result, err := rdb.LPop(ctx, "high_queue").Result()
@@ -248,7 +247,7 @@ func handleNewUrl(set *HashSet,url string) {
 
 	set.AddItem(url)
 
-	time.AfterFunc(2*time.Second,func(){
+	time.AfterFunc(3600*time.Second,func(){
 		set.DeleteItem(url)
 	})
 

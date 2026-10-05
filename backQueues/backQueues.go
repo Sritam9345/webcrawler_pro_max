@@ -16,13 +16,22 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 
 	match := extractDomainName(url)
 
-	fmt.Println(match)
 
 	exists,err:= rdb.LLen(ctx,match).Result()
 
+	
+
 	limit,_ := rdb.Get(ctx, "queue_limit").Int()
+	fmt.Println(limit)
+
+	if limit >= 10 {
+		full_error := errors.New("All workers are busy ")
+		return full_error
+	}
 
 	limit+=1
+	
+
 
 	err_write := rdb.Set(ctx,"queue_limit",limit,0).Err()
 
@@ -36,10 +45,11 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 	}
 
 	if exists < 10 {
-
+		fmt.Println("reached here")
 		err_push := rdb.LPush(ctx,match,url).Err()
-		
 
+		rdb.LPush(ctx,"waiting_list",match)
+		
 		if err_push!= nil{
 			return err_push
 		}

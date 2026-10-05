@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"webcrawler/bqSelector"
 	"webcrawler/fileUploader"
 	"webcrawler/urlParser"
 	"github.com/redis/go-redis/v9"
+	"webcrawler/schemas"
 )
 
 
 
 
-func Run(domainName string,manager *bqSelector.Manager) {
+func Run(domainName string,manager *schemas.Manager) {
 
-	fmt.Printf("Statrting %s worker",domainName)
+	fmt.Printf("Statrting %s worker\n",domainName)
 
 	if manager == nil {
+		
 		return
 	}
 
@@ -29,7 +30,6 @@ func Run(domainName string,manager *bqSelector.Manager) {
 	})
 
 	ctx := context.Background()
-
 
 	empty:= 0
 
@@ -43,9 +43,8 @@ func Run(domainName string,manager *bqSelector.Manager) {
 
 			if err == redis.Nil {
 
-				fmt.Printf("Closing %s worker , empty queue",domainName)
+				fmt.Printf("Closing %s worker , empty queue\n",domainName)
 
-				
 				
 				manager.Mu.Lock()
 
@@ -53,19 +52,28 @@ func Run(domainName string,manager *bqSelector.Manager) {
 
 				limit-=1
 
+				if limit == 0 {
+					fmt.Println("All workers are closed ... none left")
+				}
+
 				delete(manager.Workers,domainName)
 
 				err_write := rdb.Set(ctx,"queue_limit",limit,0).Err()
 
-				if err_write != nil {
 				
-					fmt.Println("Error Deleting Worker trying again")
-					manager.Mu.Unlock()
-					continue
+
+				if err_write != nil {
+
+					fmt.Println("error for write")
+					fmt.Println(err_write)
+				
+					fmt.Println("Error Deleting Worker/Queue trying again")
 		
 				}
 
 				manager.Mu.Unlock()
+
+				return
 
 			} else {
 
@@ -73,9 +81,12 @@ func Run(domainName string,manager *bqSelector.Manager) {
 
 					urls,err:= urlParser.Crawl(url)
 
+
 					if err!= nil {
-						fmt.Printf("url %s can't be crawled",url)
+						fmt.Printf("url %s can't be crawled\n",url)
 						return
+					} else {
+						fmt.Printf("successfully crawled %s\n",url)
 					}
 
 					fileUploader.UploadURLs(urls)
@@ -105,16 +116,19 @@ func Run(domainName string,manager *bqSelector.Manager) {
 
 					urls,err:= urlParser.Crawl(url)
 
+					
+
+
 					if err!= nil {
-						fmt.Printf("url %s can't be crawled",url)
+						fmt.Printf("url %s can't be crawled\n",url)
 						return
+					} else {
+						fmt.Printf("successfully crawled %s\n",url)
 					}
 
 					fileUploader.UploadURLs(urls)
 
 				}(res)
-
-				
 
 	}
 	

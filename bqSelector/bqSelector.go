@@ -1,14 +1,14 @@
 package bqSelector
 
-
-
-
 import (
-	"errors"
-	"sync"
 	"context"
-	"github.com/redis/go-redis/v9"
+	"errors"
+	"fmt"
+	"sync"
+	"webcrawler/schemas"
+	"webcrawler/worker"
 
+	"github.com/redis/go-redis/v9"
 )
 
 type Manager struct {
@@ -19,6 +19,8 @@ type Manager struct {
 
 func Run() error {
 
+	fmt.Println("hi there")
+
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379", 
 		Password: "",
@@ -27,10 +29,11 @@ func Run() error {
 
 	ctx := context.Background()
 
-	manager := &Manager{
+	manager := &schemas.Manager{
 		Workers: make(map[string]any),
 	}
 
+	
 
 	for {
 
@@ -50,17 +53,18 @@ func Run() error {
 
 	if limit >= 10{
 		full_error := errors.New("Queue is full")
-		return full_error
+		fmt.Println(full_error)
+		continue
 	}
 
 	ctx,cancel := context.WithCancel(context.Background())
 
 	manager.Workers[domainName] = []any{ctx,cancel}
 
+	fmt.Println("Running the worker")
 
-	
+	go worker.Run(domainName,manager)
 
-	
 }
 
 	
