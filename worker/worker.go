@@ -15,6 +15,8 @@ import (
 
 func Run(domainName string,manager *schemas.Manager) {
 
+	
+
 	fmt.Printf("Statrting %s worker\n",domainName)
 
 	if manager == nil {
@@ -33,20 +35,8 @@ func Run(domainName string,manager *schemas.Manager) {
 
 	empty:= 0
 
-	for {
 
-		time.Sleep(5 * time.Second)
-
-		if empty == 1 {
-
-			result,err := rdb.BLPop(ctx,10*time.Second,domainName).Result()
-
-			if err == redis.Nil {
-
-				fmt.Printf("Closing %s worker , empty queue\n",domainName)
-
-				
-				manager.Mu.Lock()
+	defer func(){	manager.Mu.Lock()
 
 				limit,_ := rdb.Get(ctx, "queue_limit").Int()
 
@@ -72,6 +62,19 @@ func Run(domainName string,manager *schemas.Manager) {
 				}
 
 				manager.Mu.Unlock()
+			}()
+
+	for {
+
+		time.Sleep(5 * time.Second)
+
+		if empty == 1 {
+
+			result,err := rdb.BLPop(ctx,10*time.Second,domainName).Result()
+
+			if err == redis.Nil {
+
+				fmt.Printf("Closing %s worker , empty queue\n",domainName)
 
 				return
 

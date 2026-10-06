@@ -1,33 +1,49 @@
 package main
 
-
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
-	"math/rand/v2"
-	"webcrawler/backQueues"
 	"fmt"
+	"math/rand/v2"
+	"sync"
 	"time"
+	"webcrawler/backQueues"
+	"github.com/redis/go-redis/v9"
 )
 
-type HashSet map[string]struct{}
+type HashSet struct {
+	mp map[string]struct{}
+	mu sync.Mutex
+}
 
 func NewHashSet() *HashSet{
-	a := make(HashSet)
-	return &a
+	a := &HashSet{
+		mp: make(map[string]struct{}),
+	}
+	return a
 }
 
 
-func (set HashSet) AddItem (item string) {
-	set[item] = struct{}{}
+func (set *HashSet) AddItem (item string) {
+	fmt.Printf("added %s to map\n",item)
+
+	set.mu.Lock()
+	set.mp[item]=struct{}{}
+	set.mu.Unlock()
 }
 
-func (set HashSet) DeleteItem (item string) {
-	delete(set,item)
+func (set *HashSet) DeleteItem (item string) {
+	
+	set.mu.Lock()
+	delete(set.mp,item)
+	set.mu.Unlock()
 }
 
-func (set HashSet) Contains(item string) bool {
-	_,exists := set[item]
+func (set *HashSet) Contains(item string) bool {
+
+	set.mu.Lock()
+	_,exists := set.mp[item]
+	set.mu.Unlock()
+
 	return exists
 }
 
@@ -64,11 +80,11 @@ func fQselector(){
     		).Result()
 
 			
-			fmt.Println(result[1])
 
 			exists := set.Contains(result[1])
 
 			if exists {
+				fmt.Printf("already crawled..%s\n",result[1])
 				continue
 			} else {
 				
@@ -117,6 +133,16 @@ func fQselector(){
 				continue
 			}
 
+			exists := set.Contains(result)
+
+			if exists {
+				fmt.Printf("already crawled..%s\n",result)
+				continue
+			} else {
+				
+				go handleNewUrl(set,result)
+			}
+
 			backQueues.Run(rdb,ctx,result)
 
 			
@@ -151,6 +177,16 @@ func fQselector(){
 				continue
 			}
 
+			exists := set.Contains(result)
+
+			if exists {
+				fmt.Printf("already crawled..%s\n",result)
+				continue
+			} else {
+				
+				go handleNewUrl(set,result)
+			}
+
 			backQueues.Run(rdb,ctx,result)
 
 			
@@ -181,6 +217,16 @@ func fQselector(){
 		
 			if high==1 && low==1 && med==1 {
 				continue
+			}
+
+			exists := set.Contains(result)
+
+			if exists {
+				fmt.Printf("already crawled..%s\n",result)
+				continue
+			} else {
+				
+				go handleNewUrl(set,result)
 			}
 
 			backQueues.Run(rdb,ctx,result)
@@ -244,6 +290,7 @@ func readLowQ(rdb *redis.Client, ctx context.Context) (string,error) {
 }
 
 func handleNewUrl(set *HashSet,url string) {
+	
 
 	set.AddItem(url)
 

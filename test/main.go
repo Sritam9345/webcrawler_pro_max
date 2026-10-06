@@ -10,7 +10,7 @@ import (
 
 
 func main() {
-	urls ,err := urlParser.Crawl("https://www.google.com/")
+	urls ,err := urlParser.Crawl("https://bbc.com")
 
 	if err!= nil {
 		fmt.Printf("%s",err)

@@ -2,7 +2,6 @@ package bqSelector
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"webcrawler/schemas"
@@ -46,14 +45,6 @@ func Run() error {
 	_,ok := manager.Workers[domainName]
 
 	if ok == true {
-		continue
-	}
-
-	limit,_ := rdb.Get(ctx, "queue_limit").Int()
-
-	if limit >= 10{
-		full_error := errors.New("Queue is full")
-		fmt.Println(full_error)
 		continue
 	}
 

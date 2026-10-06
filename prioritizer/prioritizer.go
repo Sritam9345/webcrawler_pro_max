@@ -2,9 +2,9 @@ package prioritizer
 
 import (
 	"encoding/csv"
+	"fmt"
 	"io"
 	"webcrawler/frontQueues"
-	"fmt"
 )
 
 func Run(file io.Reader) ([]string,error) {
@@ -28,15 +28,16 @@ func Run(file io.Reader) ([]string,error) {
 		}
 
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
 		url := record[1]
 
+		
+
 		urls = append(urls,url)
 	}
-
-	fmt.Println(urls)
 
 	frontQueues.AddToFrontQueue(urls)
 

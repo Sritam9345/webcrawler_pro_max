@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 	"net/url"
-	"fmt"
+	"regexp"
 
 )
 
@@ -17,22 +17,28 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 	match := extractDomainName(url)
 
 
+
+	if match == ""{
+		full_error := errors.New("Invalid url")
+		return full_error
+	}
+
+
 	exists,err:= rdb.LLen(ctx,match).Result()
 
 	
 
 	limit,_ := rdb.Get(ctx, "queue_limit").Int()
-	fmt.Println(limit)
 
 	if limit >= 10 {
 		full_error := errors.New("All workers are busy ")
 		return full_error
 	}
 
+	if exists == 0 {
 	limit+=1
+	}
 	
-
-
 	err_write := rdb.Set(ctx,"queue_limit",limit,0).Err()
 
 	if err_write != nil {
@@ -45,7 +51,7 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 	}
 
 	if exists < 10 {
-		fmt.Println("reached here")
+		
 		err_push := rdb.LPush(ctx,match,url).Err()
 
 		rdb.LPush(ctx,"waiting_list",match)
@@ -65,6 +71,12 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 
 }
 
+var domainRegex = regexp.MustCompile(
+	`(?i)(?:^|\.)(google|amazon|reddit|wikipedia|bbc|twitter|linkedin|youtube|github|` +
+		`pinterest|medium|stackoverflow|oracle|microsoft|apple|nvidia|intel|samsung|` +
+		`sony|tesla|spacex|facebook|instagram|whatsapp|telegram|discord|slack|` +
+		`zoom|dropbox|canva|figma|openai|anthropic|perplexity|huggingface)(?:\.|$)`,
+)
 
 
 func extractDomainName(rawURL string) string {
@@ -73,17 +85,13 @@ func extractDomainName(rawURL string) string {
 		return ""
 	}
 
-	host := u.Hostname()
+	host := strings.ToLower(u.Hostname())
 
-	
-	host = strings.TrimPrefix(host, "www.")
+	match := domainRegex.FindStringSubmatch(host)
 
-	
-	parts := strings.Split(host, ".")
-
-	if len(parts) == 0 {
-		return ""
+	if len(match) > 1 {
+		return match[1]
 	}
 
-	return parts[0]
+	return ""
 }
