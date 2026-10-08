@@ -95,3 +95,6 @@ func extractDomainName(rawURL string) string {
 
 	return ""
 }
+
+
+//all mem-bounded , working fine

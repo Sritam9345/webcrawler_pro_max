@@ -40,3 +40,5 @@ func main() {
 
 	http.ListenAndServe(":8080", nil)
 }
+
+//all mem-bounded , working fine

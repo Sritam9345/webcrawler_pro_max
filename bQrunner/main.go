@@ -12,3 +12,5 @@ func main(){
 	fmt.Println("Now running the bqSelector")
 	bqSelector.Run()
 }
+
+//all mem-bounded , working fine

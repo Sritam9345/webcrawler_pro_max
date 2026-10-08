@@ -1,4 +1,4 @@
-package main
+package fqSelector
 
 import (
 	"context"
@@ -48,7 +48,7 @@ func (set *HashSet) Contains(item string) bool {
 }
 
 
-func fQselector(){
+func Run(){
 
 	fmt.Println("Running the front queue selector")
 
@@ -88,11 +88,10 @@ func fQselector(){
 				continue
 			} else {
 				
-				go handleNewUrl(set,result[1])
+				go handleNewUrl(rdb,ctx,set,result[1])
 			}
 
 
-			backQueues.Run(rdb,ctx,result[1])
 			
 			
 
@@ -140,10 +139,8 @@ func fQselector(){
 				continue
 			} else {
 				
-				go handleNewUrl(set,result)
+				go handleNewUrl(rdb,ctx,set,result)
 			}
-
-			backQueues.Run(rdb,ctx,result)
 
 			
 
@@ -184,10 +181,10 @@ func fQselector(){
 				continue
 			} else {
 				
-				go handleNewUrl(set,result)
+				go handleNewUrl(rdb,ctx,set,result)
 			}
 
-			backQueues.Run(rdb,ctx,result)
+			
 
 			
 			
@@ -226,11 +223,8 @@ func fQselector(){
 				continue
 			} else {
 				
-				go handleNewUrl(set,result)
+				go handleNewUrl(rdb,ctx,set,result)
 			}
-
-			backQueues.Run(rdb,ctx,result)
-
 			
 
 		}
@@ -289,8 +283,13 @@ func readLowQ(rdb *redis.Client, ctx context.Context) (string,error) {
 	return result,nil
 }
 
-func handleNewUrl(set *HashSet,url string) {
+func handleNewUrl(rdb *redis.Client,ctx context.Context,set *HashSet,url string) {
 	
+	if len(set.mp) > 100 {
+		fmt.Println("hash-map is full can't add more")
+		return
+	}
+
 
 	set.AddItem(url)
 
@@ -298,9 +297,11 @@ func handleNewUrl(set *HashSet,url string) {
 		set.DeleteItem(url)
 	})
 
+	backQueues.Run(rdb,ctx,url)
+
 }
 
 
-func main(){
-	fQselector()
-}
+
+
+//all mem-bounded , working fine

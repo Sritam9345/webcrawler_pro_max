@@ -43,3 +43,6 @@ func Run(file io.Reader) ([]string,error) {
 
 	return urls,nil
 }
+
+
+//all mem-bounded , working fine

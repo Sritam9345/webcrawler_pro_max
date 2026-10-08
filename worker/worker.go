@@ -13,7 +13,7 @@ import (
 
 
 
-func Run(domainName string,manager *schemas.Manager) {
+func Run(rdb *redis.Client,domainName string,manager *schemas.Manager) {
 
 	
 
@@ -24,12 +24,6 @@ func Run(domainName string,manager *schemas.Manager) {
 		return
 	}
 
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", 
-		Password: "",
-		DB:       0,
-	})
 
 	ctx := context.Background()
 
@@ -139,4 +133,5 @@ func Run(domainName string,manager *schemas.Manager) {
 
 
 
+//all mem-bounded , working fine
 

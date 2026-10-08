@@ -54,10 +54,12 @@ func Run() error {
 
 	fmt.Println("Running the worker")
 
-	go worker.Run(domainName,manager)
+	go worker.Run(rdb,domainName,manager)
 
 }
 
 	
 }
 
+
+//all mem-bounded , working fine

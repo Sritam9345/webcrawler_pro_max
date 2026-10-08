@@ -80,3 +80,5 @@ func UploadURLs(urls []string) error {
 
 	return nil
 }
+
+//all mem-bounded , working fine

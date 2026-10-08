@@ -59,3 +59,6 @@ func Crawl(pageURL string) ([]string, error) {
 
 	return urls, nil
 }
+
+
+//all mem-bounded , working fine

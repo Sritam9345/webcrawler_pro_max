@@ -18,19 +18,37 @@ func AddToFrontQueue(urls []string) {
 
 	ctx := context.Background()
 
-	for _,url := range urls {
+	for _, url := range urls {
 
-		redisKey := fmt.Sprintf("%s_queue",classifier())
+	redisKey := fmt.Sprintf("%s_queue", classifier())
 
-		
+	script := `
+		local len = redis.call("LLEN", KEYS[1])
 
-		err:= rdb.RPush(ctx,redisKey,url).Err()
+		if len >= 100 then
+			return 0
+		end
 
-		if err != nil {
-			panic(err)
-		}
+		redis.call("RPUSH", KEYS[1], ARGV[1])
+		return 1
+	`
 
+	result, err := rdb.Eval(
+		ctx,
+		script,
+		[]string{redisKey},
+		url,
+	).Int()
+
+	if err != nil {
+		panic(err)
 	}
+
+	if result == 0 {
+		fmt.Println("Queue is full")
+		continue
+	}
+}
 
 
 	
@@ -55,3 +73,6 @@ func classifier() string {
 	}
 
 }
+
+
+//all mem-bounded , working fine
