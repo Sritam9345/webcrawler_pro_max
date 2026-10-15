@@ -44,8 +44,8 @@ func AddToFrontQueue(urls []string) {
 		panic(err)
 	}
 
+
 	if result == 0 {
-		fmt.Println("Queue is full")
 		continue
 	}
 }

@@ -28,7 +28,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("recieved request!")
+	
 
 	prioritizer.Run(file)
 }

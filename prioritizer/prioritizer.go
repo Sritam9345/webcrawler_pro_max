@@ -39,6 +39,7 @@ func Run(file io.Reader) ([]string,error) {
 		urls = append(urls,url)
 	}
 
+
 	frontQueues.AddToFrontQueue(urls)
 
 	return urls,nil

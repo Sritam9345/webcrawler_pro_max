@@ -24,7 +24,6 @@ func NewHashSet() *HashSet{
 
 
 func (set *HashSet) AddItem (item string) {
-	fmt.Printf("added %s to map\n",item)
 
 	set.mu.Lock()
 	set.mp[item]=struct{}{}
@@ -60,9 +59,27 @@ func Run(){
 	low := 0
 	med := 0
 
+	totalCrawled := 0
+	hitUrls := 0
+	missUrls := 0
+	discardedUrls := 0
+
+
+	ticker := time.NewTicker(2 * time.Second)
+
+go func() {
+    for range ticker.C {
+        metrics(&missUrls,&hitUrls,&totalCrawled,&discardedUrls)
+    }
+}()
+
+
+
+
 	set := NewHashSet()
 	
 	for {
+
 
 		if (high==1 && low==1 && med==1) {
 
@@ -70,8 +87,6 @@ func Run(){
 			low = 0
 			med = 0
 
-
-			fmt.Println("all frontQueues are empty... waiting...")
 
 			result, _ := rdb.BLPop(ctx, 0,
         "high_queue",
@@ -83,12 +98,22 @@ func Run(){
 
 			exists := set.Contains(result[1])
 
+			
+
 			if exists {
-				fmt.Printf("already crawled..%s\n",result[1])
+				hitUrls++
 				continue
 			} else {
+				missUrls++
+   			    totalCrawled++
 				
-				go handleNewUrl(rdb,ctx,set,result[1])
+				isFull := handleNewUrl(set,result[1])
+
+				if isFull == false {
+				backQueues.Run(rdb,ctx,result[1])
+			} else {
+				discardedUrls++
+			}
 			}
 
 
@@ -134,12 +159,21 @@ func Run(){
 
 			exists := set.Contains(result)
 
+			
+
 			if exists {
-				fmt.Printf("already crawled..%s\n",result)
+				hitUrls++
 				continue
 			} else {
-				
-				go handleNewUrl(rdb,ctx,set,result)
+				missUrls++
+    			totalCrawled++
+				isFull := handleNewUrl(set,result)
+
+				if isFull == false {
+				backQueues.Run(rdb,ctx,result)
+			} else {
+				discardedUrls++
+			}
 			}
 
 			
@@ -176,12 +210,21 @@ func Run(){
 
 			exists := set.Contains(result)
 
+			
+
 			if exists {
-				fmt.Printf("already crawled..%s\n",result)
+				hitUrls++
 				continue
 			} else {
-				
-				go handleNewUrl(rdb,ctx,set,result)
+				missUrls++
+   				 totalCrawled++
+				isFull := handleNewUrl(set,result)
+
+				if isFull == false {
+				backQueues.Run(rdb,ctx,result)
+			} else {
+				discardedUrls++
+			}
 			}
 
 			
@@ -218,12 +261,22 @@ func Run(){
 
 			exists := set.Contains(result)
 
+			
+
 			if exists {
-				fmt.Printf("already crawled..%s\n",result)
+				hitUrls++
 				continue
 			} else {
+				missUrls++
+   				 totalCrawled++
 				
-				go handleNewUrl(rdb,ctx,set,result)
+				isFull := handleNewUrl(set,result)
+
+				if isFull == false {
+				backQueues.Run(rdb,ctx,result)
+			} else {
+				discardedUrls++
+			}
 			}
 			
 
@@ -283,25 +336,39 @@ func readLowQ(rdb *redis.Client, ctx context.Context) (string,error) {
 	return result,nil
 }
 
-func handleNewUrl(rdb *redis.Client,ctx context.Context,set *HashSet,url string) {
+func handleNewUrl(set *HashSet,url string) bool {
 	
-	if len(set.mp) > 100 {
-		fmt.Println("hash-map is full can't add more")
-		return
+	if len(set.mp) > 1000 {
+		return true
 	}
-
+				
 
 	set.AddItem(url)
 
-	time.AfterFunc(3600*time.Second,func(){
+	time.AfterFunc(10*time.Second,func(){
 		set.DeleteItem(url)
 	})
 
-	backQueues.Run(rdb,ctx,url)
+	return false
 
 }
 
 
+func metrics(missUrls *int , hitUrls *int,totalCrawled *int,discardedUrls *int){
+	hitMissRatio := 0.0
+	discardedRate := 0.0
+
+		if *missUrls > 0 {
+    hitMissRatio = float64(*hitUrls) / float64(*missUrls)
+					}
+
+		if *totalCrawled >0{
+			discardedRate = float64(*discardedUrls) / float64(*totalCrawled)
+		}
+
+	fmt.Printf("\rTotal Crawled: %d | Hits: %d | Misses: %d | Hit/Miss Ratio: %.2f | Discarded Rate: %.2f ",
+    *totalCrawled, *hitUrls, *missUrls, hitMissRatio,discardedRate)
+}
 
 
 //all mem-bounded , working fine

@@ -6,7 +6,6 @@ import (
 	"sync"
 	"webcrawler/schemas"
 	"webcrawler/worker"
-
 	"github.com/redis/go-redis/v9"
 )
 

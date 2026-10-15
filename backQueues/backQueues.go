@@ -2,12 +2,11 @@ package backQueues
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
 	"errors"
-	"strings"
 	"net/url"
 	"regexp"
-
+	"strings"
+	"github.com/redis/go-redis/v9"
 )
 
 
@@ -24,19 +23,19 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 	}
 
 
-	exists,err:= rdb.LLen(ctx,match).Result()
-
+	exists,err := rdb.SIsMember(ctx, "registered_queues", match).Result()
 	
-
 	limit,_ := rdb.Get(ctx, "queue_limit").Int()
 
-	if limit >= 10 {
+	if limit >= 10 && exists == false {
 		full_error := errors.New("All workers are busy ")
 		return full_error
 	}
 
-	if exists == 0 {
-	limit+=1
+	if exists == false {
+		
+	    limit+=1
+		rdb.SAdd(ctx,"registered_queues",match)
 	}
 	
 	err_write := rdb.Set(ctx,"queue_limit",limit,0).Err()
@@ -50,7 +49,11 @@ func Run(rdb *redis.Client,ctx context.Context,url string) error {
 		return err
 	}
 
-	if exists < 10 {
+	len, err := rdb.LLen(ctx, match).Result()
+
+	
+
+	if int(len) < 10 {
 		
 		err_push := rdb.LPush(ctx,match,url).Err()
 
@@ -87,10 +90,23 @@ func extractDomainName(rawURL string) string {
 
 	host := strings.ToLower(u.Hostname())
 
+	
 	match := domainRegex.FindStringSubmatch(host)
-
 	if len(match) > 1 {
 		return match[1]
+	}
+
+	
+	if host == "localhost" {
+		parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+		if len(parts) > 0 {
+			match := domainRegex.FindStringSubmatch(
+				strings.ToLower(parts[0]),
+			)
+			if len(match) > 1 {
+				return match[1]
+			}
+		}
 	}
 
 	return ""
